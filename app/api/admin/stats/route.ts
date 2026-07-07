@@ -1,13 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const isYouTubeSource = (video_id: string) =>
   /^\d+$/.test(video_id) || video_id === 'pin'
 
-export async function GET() {
-  const { data: clicks, error: clicksError } = await supabaseAdmin
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl
+  const from = searchParams.get('from')
+  const to = searchParams.get('to')
+
+  let clicksQuery = supabaseAdmin
     .from('link_clicks')
     .select('video_id, destination')
+
+  if (from) clicksQuery = clicksQuery.gte('clicked_at', from)
+  if (to)   clicksQuery = clicksQuery.lte('clicked_at', to)
+
+  const { data: clicks, error: clicksError } = await clicksQuery
 
   if (clicksError) {
     return NextResponse.json({ error: clicksError.message }, { status: 500 })

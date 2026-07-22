@@ -211,48 +211,47 @@ export default function AdminPage() {
         {/* ── YouTube Section ── */}
         <div className="mb-6 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
 
-          {/* Section header — always visible */}
+          {/* Section header */}
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-base font-semibold text-gray-900">YouTube</h2>
+          </div>
+
+          {/* Summary cards — always visible */}
+          <div className="px-6 pt-5 pb-5">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: 'Videos Tracked', value: stats.filter(s => s.video_id !== 'pin').length, colour: 'text-gray-900' },
+                { label: 'Total Views',    value: totalViews.toLocaleString(),                    colour: 'text-gray-900' },
+                { label: 'Total Clicks',   value: totalClicks,                                    colour: 'text-gray-900' },
+                { label: 'Overall CTR',    value: overallCTR,                                     colour: 'text-rose-500' },
+                { label: 'Total Calls',    value: totalCalls,                                     colour: 'text-blue-600' },
+              ].map(card => (
+                <div key={card.label} className="bg-rose-50 border border-rose-100 rounded-xl p-4">
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">{card.label}</p>
+                  <p className={`text-3xl font-bold ${card.colour}`}>{card.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Videos sub-section toggle */}
           <button
             onClick={() => setYtOpen(v => !v)}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-rose-50/60 transition group"
+            className="w-full flex items-center justify-between px-6 py-3 border-t border-gray-100 hover:bg-rose-50/50 transition group"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2">
               <span className={`text-gray-400 text-[10px] transition-transform duration-200 ${ytOpen ? 'rotate-90' : ''}`}>▶</span>
-              <h2 className="text-base font-semibold text-gray-900">YouTube</h2>
-              {!ytOpen && (
-                <span className="text-xs text-gray-400 truncate">
-                  {stats.filter(s => s.video_id !== 'pin').length} videos
-                  &nbsp;·&nbsp;{totalViews.toLocaleString()} views
-                  &nbsp;·&nbsp;{totalClicks.toLocaleString()} clicks
-                  &nbsp;·&nbsp;CTR {overallCTR}
-                  &nbsp;·&nbsp;{totalCalls} calls
-                </span>
-              )}
+              <span className="text-sm font-medium text-gray-500">Videos</span>
+              <span className="text-xs text-gray-300">{stats.filter(s => s.video_id !== 'pin').length} rows</span>
             </div>
-            <span className="text-xs text-gray-300 group-hover:text-rose-400 transition shrink-0 ml-4">
+            <span className="text-xs text-gray-300 group-hover:text-rose-400 transition">
               {ytOpen ? 'collapse' : 'expand'}
             </span>
           </button>
 
-          {/* Section body */}
+          {/* Collapsible: controls + table + link format */}
           {ytOpen && (
-            <div className="border-t border-gray-100 px-6 pt-5 pb-6">
-
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                {[
-                  { label: 'Videos Tracked', value: stats.filter(s => s.video_id !== 'pin').length, colour: 'text-gray-900' },
-                  { label: 'Total Views',    value: totalViews.toLocaleString(),                    colour: 'text-gray-900' },
-                  { label: 'Total Clicks',   value: totalClicks,                                    colour: 'text-gray-900' },
-                  { label: 'Overall CTR',    value: overallCTR,                                     colour: 'text-rose-500' },
-                  { label: 'Total Calls',    value: totalCalls,                                     colour: 'text-blue-600' },
-                ].map(card => (
-                  <div key={card.label} className="bg-rose-50 border border-rose-100 rounded-xl p-4">
-                    <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">{card.label}</p>
-                    <p className={`text-3xl font-bold ${card.colour}`}>{card.value}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="px-6 pt-4 pb-6">
 
               {/* Controls row */}
               <div className="flex flex-wrap items-center gap-3 mb-5">

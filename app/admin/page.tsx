@@ -15,6 +15,22 @@ type VideoStats = {
   published_at: string | null
 }
 
+type MonthlyStats = {
+  year: number
+  month: number
+  videos_published: number
+  impressions: number
+  views: number
+  avg_retention_pct: number | null
+  avg_ctr_pct: number | null
+  subscriber_gain: number
+  total_subscribers: number | null
+  watch_time_hours: number
+  estimated_revenue: number
+  is_partial: boolean
+  synced_at: string | null
+}
+
 type DisplayMode = 'count' | 'percent'
 type SortBy = 'call' | 'webinar' | 'quiz' | 'guide' | 'total' | 'views' | 'video_id' | 'published_at' | null
 type SortDir = 'asc' | 'desc'
@@ -28,6 +44,12 @@ function pct(count: number, views: number): string {
 function ctr(total: number, views: number): string {
   if (!views) return '—'
   return ((total / views) * 100).toFixed(1) + '%'
+}
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
+  return n.toLocaleString()
 }
 
 function startOfDay(d: Date): string {
@@ -85,6 +107,12 @@ export default function AdminPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [ytOpen, setYtOpen] = useState(true)
+  const [monthlyOpen, setMonthlyOpen] = useState(true)
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([])
+  const [isConnected, setIsConnected] = useState(false)
+  const [syncingAnalytics, setSyncingAnalytics] = useState(false)
+  const [analyticsSyncMsg, setAnalyticsSyncMsg] = useState('')
+  const [openYears, setOpenYears] = useState<Set<number>>(new Set([new Date().getFullYear()]))
   const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -95,9 +123,30 @@ export default function AdminPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Handle OAuth callback redirect params
+  useEffect(() => {
+    if (!authed) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('yt_connected') === '1') {
+      window.history.replaceState({}, '', '/admin')
+      syncAnalytics()
+    }
+    const ytErr = params.get('yt_error')
+    if (ytErr) {
+      setAnalyticsSyncMsg(`OAuth error: ${ytErr}`)
+      window.history.replaceState({}, '', '/admin')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed])
+
   const login = () => {
-    if (password === 'healyourheart2024') { setAuthed(true); fetchStats(LIFETIME) }
-    else setError('Incorrect password')
+    if (password === 'healyourheart2024') {
+      setAuthed(true)
+      fetchStats(LIFETIME)
+      fetchMonthlyStats()
+    } else {
+      setError('Incorrect password')
+    }
   }
 
   const fetchStats = async (range: DateRange) => {
@@ -111,6 +160,39 @@ export default function AdminPage() {
       setStats(data.stats || [])
     } catch { setError('Failed to load stats') }
     setLoading(false)
+  }
+
+  const fetchMonthlyStats = async () => {
+    try {
+      const res = await fetch('/api/admin/monthly-stats')
+      const data = await res.json()
+      setMonthlyStats(data.rows || [])
+      setIsConnected(data.isConnected || false)
+    } catch { /* silent */ }
+  }
+
+  const syncAnalytics = async () => {
+    setSyncingAnalytics(true)
+    setAnalyticsSyncMsg('')
+    try {
+      const res = await fetch('/api/admin/sync-youtube-analytics', { method: 'POST' })
+      const data = await res.json()
+      if (data.error) setAnalyticsSyncMsg('Error: ' + data.error)
+      else {
+        setAnalyticsSyncMsg(`Synced ${data.synced} months`)
+        fetchMonthlyStats()
+      }
+    } catch { setAnalyticsSyncMsg('Sync failed') }
+    setSyncingAnalytics(false)
+  }
+
+  const toggleYear = (year: number) => {
+    setOpenYears(prev => {
+      const next = new Set(prev)
+      if (next.has(year)) next.delete(year)
+      else next.add(year)
+      return next
+    })
   }
 
   const applyRange = (range: DateRange) => { setDateRange(range); setShowPicker(false); fetchStats(range) }
@@ -198,6 +280,8 @@ export default function AdminPage() {
       })
     : stats
 
+  const monthlyYears = Array.from(new Set(monthlyStats.map(r => r.year))).sort((a, b) => b - a)
+
   return (
     <div className="min-h-screen bg-rose-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -234,7 +318,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Videos sub-section toggle */}
+          {/* ── Videos sub-section ── */}
           <button
             onClick={() => setYtOpen(v => !v)}
             className="w-full flex items-center justify-between px-6 py-3 border-t border-gray-100 hover:bg-rose-50/50 transition group"
@@ -249,7 +333,6 @@ export default function AdminPage() {
             </span>
           </button>
 
-          {/* Collapsible: controls + table + link format */}
           {ytOpen && (
             <div className="px-6 pt-4 pb-6">
 
@@ -281,7 +364,7 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Year</p>
+                      <p className="text-gray-400 text-xs uppercase tracking-widests mb-2">Year</p>
                       <div className="space-y-0.5 mb-4">
                         <button onClick={() => applyRange(yearRange(2026))}
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${dateRange.label === '2026' ? 'bg-rose-100 text-rose-800 font-medium' : 'text-gray-600 hover:bg-rose-50'}`}>
@@ -289,7 +372,7 @@ export default function AdminPage() {
                         </button>
                       </div>
 
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Month</p>
+                      <p className="text-gray-400 text-xs uppercase tracking-widests mb-2">Month</p>
                       <div className="space-y-0.5 mb-4">
                         {recentMonths.map(m => (
                           <button key={`${m.year}-${m.month}`} onClick={() => applyRange(monthRange(m.year, m.month, m.label))}
@@ -299,7 +382,7 @@ export default function AdminPage() {
                         ))}
                       </div>
 
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Custom range</p>
+                      <p className="text-gray-400 text-xs uppercase tracking-widests mb-2">Custom range</p>
                       <div className="space-y-2">
                         <div className="flex gap-2 items-center">
                           <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
@@ -506,8 +589,175 @@ export default function AdminPage() {
 
             </div>
           )}
-        </div>
 
+          {/* ── Monthly Stats sub-section ── */}
+          <button
+            onClick={() => setMonthlyOpen(v => !v)}
+            className="w-full flex items-center justify-between px-6 py-3 border-t border-gray-100 hover:bg-rose-50/50 transition group"
+          >
+            <div className="flex items-center gap-2">
+              <span className={`text-gray-400 text-[10px] transition-transform duration-200 ${monthlyOpen ? 'rotate-90' : ''}`}>▶</span>
+              <span className="text-sm font-medium text-gray-500">Monthly Stats</span>
+              {!isConnected && (
+                <span className="text-xs text-amber-400 ml-1">· not connected</span>
+              )}
+            </div>
+            <span className="text-xs text-gray-300 group-hover:text-rose-400 transition">
+              {monthlyOpen ? 'collapse' : 'expand'}
+            </span>
+          </button>
+
+          {monthlyOpen && (
+            <div className="px-6 pt-4 pb-6 border-t border-gray-100">
+
+              {/* Connection + sync controls */}
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                {!isConnected ? (
+                  <a
+                    href="/api/admin/youtube-auth/start"
+                    className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition"
+                  >
+                    Connect YouTube Analytics
+                  </a>
+                ) : (
+                  <>
+                    <span className="text-xs text-emerald-500 font-medium">✓ YouTube Analytics connected</span>
+                    <a
+                      href="/api/admin/youtube-auth/start"
+                      className="text-xs text-gray-400 hover:text-rose-500 transition underline"
+                    >
+                      Reconnect
+                    </a>
+                  </>
+                )}
+
+                <div className="ml-auto flex items-center gap-3">
+                  {analyticsSyncMsg && (
+                    <span className="text-xs text-gray-400">{analyticsSyncMsg}</span>
+                  )}
+                  {isConnected && (
+                    <button
+                      onClick={syncAnalytics}
+                      disabled={syncingAnalytics}
+                      className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition"
+                    >
+                      {syncingAnalytics ? '⏳ Syncing…' : '↑ Sync Monthly Stats'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Data */}
+              {monthlyStats.length === 0 ? (
+                <div className="border border-gray-100 rounded-xl p-10 text-center">
+                  <p className="text-gray-400 text-sm">
+                    {isConnected
+                      ? 'No data yet — click "Sync Monthly Stats" to fetch from Jan 2025.'
+                      : 'Connect YouTube Analytics above to pull monthly channel stats.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {monthlyYears.map(year => (
+                    <div key={year} className="border border-gray-100 rounded-xl overflow-hidden">
+
+                      {/* Year header */}
+                      <button
+                        onClick={() => toggleYear(year)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50/80 hover:bg-rose-50/50 transition"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-gray-400 text-[10px] transition-transform duration-200 ${openYears.has(year) ? 'rotate-90' : ''}`}>▶</span>
+                          <span className="font-semibold text-gray-700 text-sm">{year}</span>
+                          <span className="text-xs text-gray-400">
+                            {monthlyStats.filter(r => r.year === year).length} months
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-300">
+                          {openYears.has(year) ? 'collapse' : 'expand'}
+                        </span>
+                      </button>
+
+                      {openYears.has(year) && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs min-w-[920px]">
+                            <thead>
+                              <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wide text-[10px] bg-white">
+                                <th className="text-left px-4 py-2 w-36">Month</th>
+                                <th className="text-center px-3 py-2">Videos</th>
+                                <th className="text-right px-3 py-2">Impressions</th>
+                                <th className="text-right px-3 py-2">Views</th>
+                                <th className="text-right px-3 py-2">Retention</th>
+                                <th className="text-right px-3 py-2">Imp CTR</th>
+                                <th className="text-right px-3 py-2">Subs Gained</th>
+                                <th className="text-right px-3 py-2">Total Subs</th>
+                                <th className="text-right px-3 py-2">Watch Hrs</th>
+                                <th className="text-right px-4 py-2">Revenue</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {monthlyStats
+                                .filter(r => r.year === year)
+                                .map((row, i) => {
+                                  const monthName = new Date(row.year, row.month - 1, 1)
+                                    .toLocaleString('default', { month: 'long' })
+                                  return (
+                                    <tr
+                                      key={`${row.year}-${row.month}`}
+                                      className={`border-b border-gray-50 last:border-0 ${row.is_partial ? 'bg-blue-50/40' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}
+                                    >
+                                      <td className="px-4 py-2.5 font-medium text-gray-700 whitespace-nowrap">
+                                        {monthName}
+                                        {row.is_partial && (
+                                          <span className="ml-2 text-[9px] font-semibold text-blue-500 bg-blue-50 border border-blue-100 rounded-full px-1.5 py-0.5">
+                                            LIVE
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-center text-gray-600">
+                                        {row.videos_published || '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.impressions ? fmtNum(row.impressions) : '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.views ? fmtNum(row.views) : '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.avg_retention_pct != null ? row.avg_retention_pct.toFixed(1) + '%' : '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.avg_ctr_pct != null ? row.avg_ctr_pct.toFixed(2) + '%' : '—'}
+                                      </td>
+                                      <td className={`px-3 py-2.5 text-right font-medium ${row.subscriber_gain > 0 ? 'text-emerald-600' : row.subscriber_gain < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                        {row.subscriber_gain !== 0
+                                          ? (row.subscriber_gain > 0 ? '+' : '') + row.subscriber_gain.toLocaleString()
+                                          : '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.total_subscribers != null ? fmtNum(row.total_subscribers) : '—'}
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right text-gray-600">
+                                        {row.watch_time_hours ? fmtNum(Math.round(row.watch_time_hours)) + 'h' : '—'}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right text-gray-600">
+                                        {row.estimated_revenue > 0 ? `$${row.estimated_revenue.toFixed(2)}` : '—'}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
         {/* Future sections go here */}
 
       </div>

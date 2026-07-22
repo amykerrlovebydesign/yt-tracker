@@ -24,14 +24,14 @@ export async function GET(request: NextRequest) {
 
   const { data: revenues } = await supabaseAdmin
     .from('video_revenue')
-    .select('video_id, revenue, views')
+    .select('video_id, revenue, views, published_at')
 
-  const statsMap: Record<string, { call: number; webinar: number; quiz: number; guide: number; total: number; revenue: number; views: number }> = {}
+  const statsMap: Record<string, { call: number; webinar: number; quiz: number; guide: number; total: number; revenue: number; views: number; published_at: string | null }> = {}
 
   for (const click of (clicks || [])) {
     if (!isYouTubeSource(click.video_id)) continue
     if (!statsMap[click.video_id]) {
-      statsMap[click.video_id] = { call: 0, webinar: 0, quiz: 0, guide: 0, total: 0, revenue: 0, views: 0 }
+      statsMap[click.video_id] = { call: 0, webinar: 0, quiz: 0, guide: 0, total: 0, revenue: 0, views: 0, published_at: null }
     }
     statsMap[click.video_id][click.destination as 'call' | 'webinar' | 'quiz' | 'guide']++
     statsMap[click.video_id].total++
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     if (statsMap[rev.video_id]) {
       statsMap[rev.video_id].revenue = rev.revenue ?? 0
       statsMap[rev.video_id].views = rev.views ?? 0
+      statsMap[rev.video_id].published_at = rev.published_at ?? null
     }
   }
 

@@ -257,29 +257,6 @@ export default function AdminPage() {
           {/* Divider */}
           <div className="w-px h-7 bg-gray-200" />
 
-          {/* Sort buttons */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-400 text-xs mr-1">Sort by highest:</span>
-            {(['call', 'webinar', 'quiz', 'guide', 'total'] as NonNullable<SortBy>[]).map(col => (
-              <button key={col} onClick={() => toggleSort(col)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-                  sortBy === col
-                    ? 'bg-rose-100 text-rose-700 border-rose-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-rose-300 hover:text-rose-600'
-                }`}>
-                {SORT_LABELS[col]}
-              </button>
-            ))}
-            {sortBy && (
-              <button onClick={() => setSortBy(null)} className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition">
-                ✕ Clear
-              </button>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="w-px h-7 bg-gray-200" />
-
           {/* Count / % toggle */}
           <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-1">
             <button onClick={() => setMode('count')}
@@ -305,16 +282,28 @@ export default function AdminPage() {
           <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
-                  <th className="text-left px-5 py-3">Video</th>
-                  <th className="text-center px-4 py-3">Views</th>
-                  <th className={`text-center px-4 py-3 ${sortBy === 'call' ? 'text-rose-500' : 'text-blue-400'}`}>Call</th>
-                  <th className={`text-center px-4 py-3 ${sortBy === 'webinar' ? 'text-rose-500' : 'text-violet-400'}`}>Webinar</th>
-                  <th className={`text-center px-4 py-3 ${sortBy === 'quiz' ? 'text-rose-500' : 'text-emerald-400'}`}>Quiz</th>
-                  <th className={`text-center px-4 py-3 ${sortBy === 'guide' ? 'text-rose-500' : 'text-amber-400'}`}>Guide</th>
-                  <th className="text-center px-4 py-3">Total</th>
-                  <th className="text-center px-4 py-3">CTR</th>
-                  <th className="text-center px-4 py-3">Revenue</th>
+                <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide">
+                  <th className="text-left px-5 py-3 text-gray-400">Video</th>
+                  <th className="text-center px-4 py-3 text-gray-400">Views</th>
+                  {([
+                    { col: 'call',    label: 'Call',    colour: 'text-blue-400',    active: 'text-rose-500' },
+                    { col: 'webinar', label: 'Webinar', colour: 'text-violet-400',  active: 'text-rose-500' },
+                    { col: 'quiz',    label: 'Quiz',    colour: 'text-emerald-400', active: 'text-rose-500' },
+                    { col: 'guide',   label: 'Guide',   colour: 'text-amber-400',   active: 'text-rose-500' },
+                    { col: 'total',   label: 'Total',   colour: 'text-gray-400',    active: 'text-rose-500' },
+                  ] as { col: NonNullable<SortBy>; label: string; colour: string; active: string }[]).map(({ col, label, colour, active }) => (
+                    <th key={col} className="text-center px-4 py-3">
+                      <button
+                        onClick={() => toggleSort(col)}
+                        className={`inline-flex items-center gap-1 font-semibold uppercase tracking-wide transition hover:opacity-80 ${sortBy === col ? active : colour}`}
+                      >
+                        {label}
+                        <span className="text-[10px]">{sortBy === col ? '↓' : '↕'}</span>
+                      </button>
+                    </th>
+                  ))}
+                  <th className="text-center px-4 py-3 text-gray-400">CTR</th>
+                  <th className="text-center px-4 py-3 text-gray-400">Revenue</th>
                 </tr>
               </thead>
               <tbody>

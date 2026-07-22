@@ -15,7 +15,7 @@ type VideoStats = {
 }
 
 type DisplayMode = 'count' | 'percent'
-type SortBy = 'call' | 'webinar' | 'quiz' | 'guide' | null
+type SortBy = 'call' | 'webinar' | 'quiz' | 'guide' | 'total' | null
 type DateRange = { from: string | null; to: string | null; label: string }
 
 function pct(count: number, views: number): string {
@@ -59,7 +59,7 @@ function getRecentMonths(count: number) {
 const LIFETIME: DateRange = { from: null, to: null, label: 'Lifetime' }
 
 const SORT_LABELS: Record<NonNullable<SortBy>, string> = {
-  call: 'Call', webinar: 'Webinar', quiz: 'Quiz', guide: 'Guide',
+  call: 'Call', webinar: 'Webinar', quiz: 'Quiz', guide: 'Guide', total: 'Total',
 }
 
 export default function AdminPage() {
@@ -260,7 +260,7 @@ export default function AdminPage() {
           {/* Sort buttons */}
           <div className="flex items-center gap-1.5">
             <span className="text-gray-400 text-xs mr-1">Sort by highest:</span>
-            {(['call', 'webinar', 'quiz', 'guide'] as NonNullable<SortBy>[]).map(col => (
+            {(['call', 'webinar', 'quiz', 'guide', 'total'] as NonNullable<SortBy>[]).map(col => (
               <button key={col} onClick={() => toggleSort(col)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                   sortBy === col

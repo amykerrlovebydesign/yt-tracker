@@ -28,10 +28,10 @@ export async function POST() {
 
   const now = new Date()
   const startDate = '2025-01-01'
-  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  const endDate = lastDayOfCurrentMonth.toISOString().split('T')[0]
+  // Month dimension requires first-of-month dates; use first of current month as end
+  const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
-  const baseMetrics = 'views,impressions,impressionClickThroughRate,estimatedMinutesWatched,averageViewPercentage,subscribersGained,subscribersLost'
+  const baseMetrics = 'views,estimatedMinutesWatched,averageViewPercentage,subscribersGained,subscribersLost'
   const withRevenue = baseMetrics + ',estimatedRevenue'
 
   const buildUrl = (metrics: string) =>
@@ -109,13 +109,9 @@ export async function POST() {
       year,
       month,
       videos_published: videosPerMonth[monthStr] ?? 0,
-      impressions: Math.round((r['impressions'] as number) ?? 0),
       views: Math.round((r['views'] as number) ?? 0),
       avg_retention_pct: r['averageViewPercentage'] != null
         ? Number((r['averageViewPercentage'] as number).toFixed(2))
-        : null,
-      avg_ctr_pct: r['impressionClickThroughRate'] != null
-        ? Number(((r['impressionClickThroughRate'] as number) * 100).toFixed(2))
         : null,
       subscriber_gain: subscribersGained - subscribersLost,
       total_subscribers: isCurrentMonth ? currentSubscribers : null,

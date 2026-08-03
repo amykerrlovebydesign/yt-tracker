@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { VIDEO_MAP } from '@/lib/videos'
+import { AdminClient } from '@/lib/quiz-insights'
+import ClientResults from '@/components/ClientResults'
+import ClientInsights from '@/components/ClientInsights'
+
+type Tab = 'youtube' | 'results' | 'insights'
 
 type VideoStats = {
   video_id: string
@@ -19,10 +24,9 @@ type MonthlyStats = {
   year: number
   month: number
   videos_published: number
-  impressions: number
+  impressions: number | null
   views: number
   avg_retention_pct: number | null
-  avg_ctr_pct: number | null
   subscriber_gain: number
   total_subscribers: number | null
   watch_time_hours: number
@@ -113,7 +117,16 @@ export default function AdminPage() {
   const [syncingAnalytics, setSyncingAnalytics] = useState(false)
   const [analyticsSyncMsg, setAnalyticsSyncMsg] = useState('')
   const [openYears, setOpenYears] = useState<Set<number>>(new Set([new Date().getFullYear()]))
+  const [editingMonthField, setEditingMonthField] = useState<{ year: number; month: number; field: string } | null>(null)
+  const [monthFieldInput, setMonthFieldInput] = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
+
+  // Tabs + quiz data (Client Results / Client Insights)
+  const [tab, setTab] = useState<Tab>('youtube')
+  const [quizClients, setQuizClients] = useState<AdminClient[] | null>(null)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [quizConfigured, setQuizConfigured] = useState(true)
+  const [quizError, setQuizError] = useState('')
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -144,9 +157,28 @@ export default function AdminPage() {
       setAuthed(true)
       fetchStats(LIFETIME)
       fetchMonthlyStats()
+      fetchQuizClients(password)
     } else {
       setError('Incorrect password')
     }
+  }
+
+  const fetchQuizClients = async (pw: string) => {
+    setQuizLoading(true)
+    setQuizError('')
+    try {
+      const res = await fetch(`/api/admin/quiz-submissions?password=${encodeURIComponent(pw)}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setQuizError(data.error || 'Failed to load client data.')
+      } else {
+        setQuizConfigured(data.configured !== false)
+        setQuizClients(data.clients || [])
+      }
+    } catch {
+      setQuizError('Failed to load client data.')
+    }
+    setQuizLoading(false)
   }
 
   const fetchStats = async (range: DateRange) => {
@@ -184,6 +216,24 @@ export default function AdminPage() {
       }
     } catch { setAnalyticsSyncMsg('Sync failed') }
     setSyncingAnalytics(false)
+  }
+
+  const startEditMonthField = (year: number, month: number, field: string, current: number | null) => {
+    setEditingMonthField({ year, month, field })
+    setMonthFieldInput(current != null ? String(current) : '')
+  }
+
+  const saveMonthField = async () => {
+    if (!editingMonthField) return
+    const { year, month, field } = editingMonthField
+    const value = monthFieldInput === '' ? null : Number(monthFieldInput)
+    setEditingMonthField(null)
+    await fetch('/api/admin/monthly-stats/update', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year, month, field, value }),
+    })
+    fetchMonthlyStats()
   }
 
   const toggleYear = (year: number) => {
@@ -287,12 +337,64 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto">
 
         {/* Page header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Love By Design Dashboard</h1>
           <p className="text-gray-400 text-sm mt-1">healyourheart.school</p>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-gray-200 mb-8">
+          {([
+            { id: 'youtube', label: 'YouTube' },
+            { id: 'results', label: 'Client Results' },
+            { id: 'insights', label: 'Client Insights' },
+          ] as { id: Tab; label: string }[]).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
+                tab === t.id
+                  ? 'border-rose-500 text-rose-600'
+                  : 'border-transparent text-gray-400 hover:text-gray-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Client Results tab ── */}
+        {tab === 'results' && (
+          <div className="mb-6">
+            {quizLoading && !quizClients ? (
+              <p className="text-gray-400 text-center py-16">Loading client data…</p>
+            ) : quizError ? (
+              <p className="text-red-500 text-center py-16">{quizError}</p>
+            ) : !quizConfigured ? (
+              <QuizNotConnected />
+            ) : (
+              <ClientResults clients={quizClients || []} />
+            )}
+          </div>
+        )}
+
+        {/* ── Client Insights tab ── */}
+        {tab === 'insights' && (
+          <div className="mb-6">
+            {quizLoading && !quizClients ? (
+              <p className="text-gray-400 text-center py-16">Loading client data…</p>
+            ) : quizError ? (
+              <p className="text-red-500 text-center py-16">{quizError}</p>
+            ) : !quizConfigured ? (
+              <QuizNotConnected />
+            ) : (
+              <ClientInsights clients={quizClients || []} />
+            )}
+          </div>
+        )}
+
         {/* ── YouTube Section ── */}
+        {tab === 'youtube' && (
         <div className="mb-6 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
 
           {/* Section header */}
@@ -680,7 +782,7 @@ export default function AdminPage() {
 
                       {openYears.has(year) && (
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs min-w-[920px]">
+                          <table className="w-full text-xs min-w-[1080px]">
                             <thead>
                               <tr className="border-b border-gray-100 text-gray-400 uppercase tracking-wide text-[10px] bg-white">
                                 <th className="text-left px-4 py-2 w-36">Month</th>
@@ -688,7 +790,6 @@ export default function AdminPage() {
                                 <th className="text-right px-3 py-2">Impressions</th>
                                 <th className="text-right px-3 py-2">Views</th>
                                 <th className="text-right px-3 py-2">Retention</th>
-                                <th className="text-right px-3 py-2">Imp CTR</th>
                                 <th className="text-right px-3 py-2">Subs Gained</th>
                                 <th className="text-right px-3 py-2">Total Subs</th>
                                 <th className="text-right px-3 py-2">Watch Hrs</th>
@@ -717,8 +818,28 @@ export default function AdminPage() {
                                       <td className="px-3 py-2.5 text-center text-gray-600">
                                         {row.videos_published || '—'}
                                       </td>
-                                      <td className="px-3 py-2.5 text-right text-gray-600">
-                                        {row.impressions ? fmtNum(row.impressions) : '—'}
+                                      <td className="px-3 py-2.5 text-right">
+                                        {editingMonthField?.year === row.year && editingMonthField?.month === row.month && editingMonthField?.field === 'impressions' ? (
+                                          <div className="flex items-center justify-end gap-1">
+                                            <input
+                                              type="number"
+                                              value={monthFieldInput}
+                                              onChange={e => setMonthFieldInput(e.target.value)}
+                                              onKeyDown={e => { if (e.key === 'Enter') saveMonthField(); if (e.key === 'Escape') setEditingMonthField(null) }}
+                                              className="w-24 bg-gray-50 border border-rose-300 text-gray-900 rounded px-2 py-0.5 text-xs focus:outline-none text-right"
+                                              autoFocus
+                                            />
+                                            <button onClick={saveMonthField} className="text-emerald-500 text-[10px]">✓</button>
+                                            <button onClick={() => setEditingMonthField(null)} className="text-gray-400 text-[10px]">✕</button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => startEditMonthField(row.year, row.month, 'impressions', row.impressions)}
+                                            className="text-gray-600 hover:text-rose-500 transition w-full text-right"
+                                          >
+                                            {row.impressions != null ? fmtNum(row.impressions) : <span className="text-gray-300">+ Add</span>}
+                                          </button>
+                                        )}
                                       </td>
                                       <td className="px-3 py-2.5 text-right text-gray-600">
                                         {row.views ? fmtNum(row.views) : '—'}
@@ -726,16 +847,33 @@ export default function AdminPage() {
                                       <td className="px-3 py-2.5 text-right text-gray-600">
                                         {row.avg_retention_pct != null ? row.avg_retention_pct.toFixed(1) + '%' : '—'}
                                       </td>
-                                      <td className="px-3 py-2.5 text-right text-gray-600">
-                                        {row.avg_ctr_pct != null ? row.avg_ctr_pct.toFixed(2) + '%' : '—'}
-                                      </td>
                                       <td className={`px-3 py-2.5 text-right font-medium ${row.subscriber_gain > 0 ? 'text-emerald-600' : row.subscriber_gain < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                                         {row.subscriber_gain !== 0
                                           ? (row.subscriber_gain > 0 ? '+' : '') + row.subscriber_gain.toLocaleString()
                                           : '—'}
                                       </td>
-                                      <td className="px-3 py-2.5 text-right text-gray-600">
-                                        {row.total_subscribers != null ? fmtNum(row.total_subscribers) : '—'}
+                                      <td className="px-3 py-2.5 text-right">
+                                        {editingMonthField?.year === row.year && editingMonthField?.month === row.month && editingMonthField?.field === 'total_subscribers' ? (
+                                          <div className="flex items-center justify-end gap-1">
+                                            <input
+                                              type="number"
+                                              value={monthFieldInput}
+                                              onChange={e => setMonthFieldInput(e.target.value)}
+                                              onKeyDown={e => { if (e.key === 'Enter') saveMonthField(); if (e.key === 'Escape') setEditingMonthField(null) }}
+                                              className="w-24 bg-gray-50 border border-rose-300 text-gray-900 rounded px-2 py-0.5 text-xs focus:outline-none text-right"
+                                              autoFocus
+                                            />
+                                            <button onClick={saveMonthField} className="text-emerald-500 text-[10px]">✓</button>
+                                            <button onClick={() => setEditingMonthField(null)} className="text-gray-400 text-[10px]">✕</button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => startEditMonthField(row.year, row.month, 'total_subscribers', row.total_subscribers)}
+                                            className="text-gray-600 hover:text-rose-500 transition w-full text-right"
+                                          >
+                                            {row.total_subscribers != null ? fmtNum(row.total_subscribers) : <span className="text-gray-300">+ Add</span>}
+                                          </button>
+                                        )}
                                       </td>
                                       <td className="px-3 py-2.5 text-right text-gray-600">
                                         {row.watch_time_hours ? fmtNum(Math.round(row.watch_time_hours)) + 'h' : '—'}
@@ -758,9 +896,27 @@ export default function AdminPage() {
           )}
 
         </div>
-        {/* Future sections go here */}
+        )}
 
       </div>
+    </div>
+  )
+}
+
+function QuizNotConnected() {
+  return (
+    <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 max-w-2xl">
+      <h2 className="text-base font-semibold text-gray-900 mb-2">Connect your quiz data</h2>
+      <p className="text-sm text-gray-600 mb-3">
+        These tabs read from your Somatic Quiz database. Add these environment variables (locally in{' '}
+        <code className="mx-1 px-1 rounded bg-white border border-gray-200">.env.local</code> and in
+        Vercel), then redeploy:
+      </p>
+      <pre className="text-xs bg-white border border-gray-200 rounded-lg p-3 overflow-x-auto text-gray-600">
+{`QUIZ_SUPABASE_URL=<Somatic Quiz project URL>
+QUIZ_SUPABASE_SERVICE_ROLE_KEY=<service_role key>
+ADMIN_PASSWORD=healyourheart2024`}
+      </pre>
     </div>
   )
 }

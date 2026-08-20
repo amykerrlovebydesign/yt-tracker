@@ -201,7 +201,6 @@ export async function captureDueSnapshots(): Promise<CaptureResult> {
         subscribers_gained: core.subscribersGained != null ? Math.round(core.subscribersGained) : null,
         views_subscribed: viewsSubscribed,
         views_unsubscribed: viewsUnsubscribed,
-        impressions_per_day: impressions != null ? Math.round((impressions / WINDOW_DAYS) * 10) / 10 : null,
         top_traffic_source: topSource,
       }, { onConflict: 'video_id' })
 

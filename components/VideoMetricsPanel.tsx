@@ -19,7 +19,7 @@ interface Snapshot {
   subscribers_gained: number | null
   views_subscribed: number | null
   views_unsubscribed: number | null
-  impressions_per_day: number | null
+  velocity: string | null
   top_traffic_source: string | null
 }
 
@@ -84,6 +84,15 @@ export default function VideoMetricsPanel({ password }: { password: string }) {
     setCapturing(false)
   }
 
+  const saveVelocity = async (video_id: string, velocity: string) => {
+    setRows((prev) => (prev ? prev.map((r) => (r.video_id === video_id ? { ...r, velocity: velocity || null } : r)) : prev))
+    await fetch(`/api/admin/video-metrics?password=${encodeURIComponent(password)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ video_id, velocity: velocity || null }),
+    }).catch(() => {})
+  }
+
   const COLS: { key: keyof Snapshot | 'sub_split'; label: string; render: (r: Snapshot) => React.ReactNode; align?: string }[] = [
     { key: 'video_id', label: '#', render: (r) => <span className="font-mono text-gray-400">#{r.video_id}</span> },
     { key: 'title', label: 'Name of video', render: (r) => r.youtube_id
@@ -102,7 +111,18 @@ export default function VideoMetricsPanel({ password }: { password: string }) {
     { key: 'impressions', label: 'Imps', render: (r) => num(r.impressions), align: 'right' },
     { key: 'views_unsubscribed', label: 'Non-subs', render: (r) => num(r.views_unsubscribed), align: 'right' },
     { key: 'sub_split', label: 'Subs (views)', render: (r) => num(r.views_subscribed), align: 'right' },
-    { key: 'impressions_per_day', label: 'Velocity', render: (r) => (r.impressions_per_day == null ? '—' : `${r.impressions_per_day}/d`), align: 'right' },
+    { key: 'velocity', label: 'Velocity', render: (r) => (
+      <select
+        value={r.velocity ?? ''}
+        onChange={(e) => saveVelocity(r.video_id, e.target.value)}
+        className="bg-white border border-gray-200 rounded px-1.5 py-1 text-xs text-gray-600 focus:outline-none focus:border-rose-400"
+      >
+        <option value="">—</option>
+        <option value="Below average">Below average</option>
+        <option value="Average">Average</option>
+        <option value="Above average">Above average</option>
+      </select>
+    ) },
     { key: 'top_traffic_source', label: 'Top source', render: (r) => r.top_traffic_source || '—' },
   ]
 

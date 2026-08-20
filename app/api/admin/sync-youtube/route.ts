@@ -24,7 +24,7 @@ export async function POST() {
 
   // YouTube API allows up to 50 IDs per request
   const BATCH = 50
-  const updates: { tracking_id: string; views: number; published_at: string | null }[] = []
+  const updates: { tracking_id: string; views: number; published_at: string | null; title: string | null }[] = []
 
   for (let i = 0; i < ytIds.length; i += BATCH) {
     const batch = ytIds.slice(i, i + BATCH)
@@ -39,15 +39,16 @@ export async function POST() {
       const trackingId = ytIdToTrackingId[item.id]
       const views = parseInt(item.statistics?.viewCount ?? '0', 10)
       const published_at = item.snippet?.publishedAt ?? null
-      if (trackingId) updates.push({ tracking_id: trackingId, views, published_at })
+      const title = item.snippet?.title ?? null
+      if (trackingId) updates.push({ tracking_id: trackingId, views, published_at, title })
     }
   }
 
   // Upsert all view counts and publish dates
-  for (const { tracking_id, views, published_at } of updates) {
+  for (const { tracking_id, views, published_at, title } of updates) {
     await supabaseAdmin
       .from('video_revenue')
-      .upsert({ video_id: tracking_id, views, published_at }, { onConflict: 'video_id' })
+      .upsert({ video_id: tracking_id, views, published_at, title }, { onConflict: 'video_id' })
   }
 
   return NextResponse.json({ synced: updates.length })

@@ -82,6 +82,7 @@ type VideoStats = {
   revenue: number
   views: number
   published_at: string | null
+  title: string | null
 }
 
 type MonthlyStats = {
@@ -694,6 +695,8 @@ export default function AdminPage() {
                     <tbody>
                       {sortedStats.map((row, i) => {
                         const info = row.video_id !== 'pin' ? VIDEO_MAP[row.video_id] : null
+                        const vidTitle = row.title || info?.title || null
+                        const vidUrl = info?.url
                         return (
                           <tr key={row.video_id}
                             className={`border-b border-gray-100 hover:bg-rose-50/50 transition ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
@@ -704,13 +707,13 @@ export default function AdminPage() {
                               ) : (
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className="font-mono text-xs text-gray-400 shrink-0">#{row.video_id}</span>
-                                  {info?.url ? (
-                                    <a href={info.url} target="_blank" rel="noopener noreferrer" title={info?.title}
+                                  {vidUrl ? (
+                                    <a href={vidUrl} target="_blank" rel="noopener noreferrer" title={vidTitle ?? undefined}
                                       className="text-gray-800 hover:text-rose-600 text-xs truncate max-w-xs transition">
-                                      {info.title} <span className="text-gray-300">↗</span>
+                                      {vidTitle ?? 'Untitled'} <span className="text-gray-300">↗</span>
                                     </a>
-                                  ) : info?.title ? (
-                                    <span className="text-gray-500 text-xs truncate max-w-xs">{info.title}</span>
+                                  ) : vidTitle ? (
+                                    <span className="text-gray-500 text-xs truncate max-w-xs">{vidTitle}</span>
                                   ) : (
                                     <span className="text-gray-300 text-xs italic">Unknown</span>
                                   )}

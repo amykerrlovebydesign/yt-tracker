@@ -156,5 +156,9 @@ export const VIDEO_MAP: Record<string, VideoInfo> = {
   '147': { title: 'Attachment Trauma Only Heals Through The Body', url: 'https://www.youtube.com/watch?v=1F_MvR6RCkE' },
   '148': { title: 'Why "Chemistry" Is Chaos To Your Nervous System', url: 'https://www.youtube.com/watch?v=jLP7Rxy18r0' },
   '149': { title: 'If You Are Single, You Need to Do This', url: 'https://www.youtube.com/watch?v=2SIjquE5jpQ' },
+  '150': { title: "Why Setting Boundaries Feels Dangerous To Your Body", url: 'https://www.youtube.com/watch?v=ydsFUo9VyAo' },
+  '151': { title: 'How Control Makes You Emotionally Unavailable (Without Realising It)', url: 'https://www.youtube.com/watch?v=ArcVNwo7Sz4' },
+  '152': { title: 'Love Addiction Is Your Inner Maiden Out Of Control', url: 'https://www.youtube.com/watch?v=M5d0HsCNBRg' },
+  '153': { title: 'How Spiritual Bypass Is A Healing Trap', url: 'https://www.youtube.com/watch?v=4KnZ_zMlMBo' },
   '154': { title: 'The "Healing" Work That Harmed Me', url: 'https://www.youtube.com/watch?v=iILdD0wqXJs' },
 }

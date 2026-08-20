@@ -1,12 +1,56 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { VIDEO_MAP } from '@/lib/videos'
 import { AdminClient } from '@/lib/quiz-insights'
 import ClientResults from '@/components/ClientResults'
 import ClientInsights from '@/components/ClientInsights'
 
-type Tab = 'youtube' | 'results' | 'insights'
+type Area = 'youtube' | 'community' | 'metrics' | 'reports'
+
+const AREAS: { id: Area; label: string; icon: ReactNode }[] = [
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <rect x="2" y="4" width="20" height="16" rx="4" />
+        <path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: 'community',
+    label: 'Community',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <circle cx="9" cy="8" r="3" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+        <path d="M16 5.5a3 3 0 0 1 0 5.5" />
+        <path d="M18 14a6 6 0 0 1 3.5 6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'metrics',
+    label: 'Monthly Metrics',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+      </svg>
+    ),
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <path d="M6 2h9l4 4v16H6z" />
+        <path d="M14 2v5h5M9 13h7M9 17h7" />
+      </svg>
+    ),
+  },
+]
 
 type VideoStats = {
   video_id: string
@@ -110,8 +154,7 @@ export default function AdminPage() {
   const [viewsInput, setViewsInput] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
-  const [ytOpen, setYtOpen] = useState(true)
-  const [monthlyOpen, setMonthlyOpen] = useState(true)
+  const [ytSub, setYtSub] = useState<'videos' | 'monthly'>('videos')
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [syncingAnalytics, setSyncingAnalytics] = useState(false)
@@ -121,8 +164,9 @@ export default function AdminPage() {
   const [monthFieldInput, setMonthFieldInput] = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
 
-  // Tabs + quiz data (Client Results / Client Insights)
-  const [tab, setTab] = useState<Tab>('youtube')
+  // Nav: business areas + sub-tabs, and quiz data (Community)
+  const [area, setArea] = useState<Area>('youtube')
+  const [communitySub, setCommunitySub] = useState<'results' | 'insights'>('results')
   const [quizClients, setQuizClients] = useState<AdminClient[] | null>(null)
   const [quizLoading, setQuizLoading] = useState(false)
   const [quizConfigured, setQuizConfigured] = useState(true)
@@ -342,64 +386,109 @@ export default function AdminPage() {
           <p className="text-gray-400 text-sm mt-1">healyourheart.school</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-gray-200 mb-8">
-          {([
-            { id: 'youtube', label: 'YouTube' },
-            { id: 'results', label: 'Client Results' },
-            { id: 'insights', label: 'Client Insights' },
-          ] as { id: Tab; label: string }[]).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
-                tab === t.id
-                  ? 'border-rose-500 text-rose-600'
-                  : 'border-transparent text-gray-400 hover:text-gray-700'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Business-area nav */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-8">
+          {AREAS.map((a) => {
+            const active = area === a.id
+            return (
+              <button
+                key={a.id}
+                onClick={() => setArea(a.id)}
+                className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition ${
+                  active
+                    ? 'bg-rose-500 border-rose-500 text-white shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-rose-400'
+                }`}
+              >
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                    active ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
+                  }`}
+                >
+                  {a.icon}
+                </span>
+                <span className="text-sm font-semibold">{a.label}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* ── Client Results tab ── */}
-        {tab === 'results' && (
+        {/* ── Community area ── */}
+        {area === 'community' && (
           <div className="mb-6">
+            <div className="flex gap-1 border-b border-gray-200 mb-6">
+              {([
+                { id: 'results', label: 'Client results' },
+                { id: 'insights', label: 'Client insights' },
+              ] as { id: 'results' | 'insights'; label: string }[]).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setCommunitySub(t.id)}
+                  className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
+                    communitySub === t.id
+                      ? 'border-rose-500 text-rose-600'
+                      : 'border-transparent text-gray-400 hover:text-gray-700'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
             {quizLoading && !quizClients ? (
               <p className="text-gray-400 text-center py-16">Loading client data…</p>
             ) : quizError ? (
               <p className="text-red-500 text-center py-16">{quizError}</p>
             ) : !quizConfigured ? (
               <QuizNotConnected />
-            ) : (
+            ) : communitySub === 'results' ? (
               <ClientResults clients={quizClients || []} />
-            )}
-          </div>
-        )}
-
-        {/* ── Client Insights tab ── */}
-        {tab === 'insights' && (
-          <div className="mb-6">
-            {quizLoading && !quizClients ? (
-              <p className="text-gray-400 text-center py-16">Loading client data…</p>
-            ) : quizError ? (
-              <p className="text-red-500 text-center py-16">{quizError}</p>
-            ) : !quizConfigured ? (
-              <QuizNotConnected />
             ) : (
               <ClientInsights clients={quizClients || []} />
             )}
           </div>
         )}
 
-        {/* ── YouTube Section ── */}
-        {tab === 'youtube' && (
+        {/* ── Monthly Metrics area ── */}
+        {area === 'metrics' && (
+          <ComingSoon
+            title="Monthly Metrics"
+            body="A month-by-month snapshot of the whole business in one place — revenue, leads, sales, and channel growth side by side. Tell me which numbers matter most and I'll lay them out here."
+          />
+        )}
+
+        {/* ── Reports area ── */}
+        {area === 'reports' && (
+          <ComingSoon
+            title="Reports"
+            body="Ready-to-share summaries pulled from your data — a marketing stats sheet, a monthly recap, a client-progress report. We'll decide together what each report should say."
+          />
+        )}
+
+        {/* ── YouTube area ── */}
+        {area === 'youtube' && (
         <div className="mb-6 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
 
-          {/* Section header */}
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900">YouTube</h2>
+          {/* Sub-tabs */}
+          <div className="px-6 pt-3 flex gap-1 border-b border-gray-100">
+            {([
+              { id: 'videos', label: 'Videos' },
+              { id: 'monthly', label: 'Monthly stats' },
+            ] as { id: 'videos' | 'monthly'; label: string }[]).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setYtSub(t.id)}
+                className={`px-3.5 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
+                  ytSub === t.id
+                    ? 'border-rose-500 text-rose-600'
+                    : 'border-transparent text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                {t.label}
+                {t.id === 'monthly' && !isConnected && (
+                  <span className="ml-1.5 text-xs text-amber-400">· not connected</span>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Summary cards — always visible */}
@@ -420,23 +509,8 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* ── Videos sub-section ── */}
-          <button
-            onClick={() => setYtOpen(v => !v)}
-            className="w-full flex items-center justify-between px-6 py-3 border-t border-gray-100 hover:bg-rose-50/50 transition group"
-          >
-            <div className="flex items-center gap-2">
-              <span className={`text-gray-400 text-[10px] transition-transform duration-200 ${ytOpen ? 'rotate-90' : ''}`}>▶</span>
-              <span className="text-sm font-medium text-gray-500">Videos</span>
-              <span className="text-xs text-gray-300">{stats.filter(s => s.video_id !== 'pin').length} rows</span>
-            </div>
-            <span className="text-xs text-gray-300 group-hover:text-rose-400 transition">
-              {ytOpen ? 'collapse' : 'expand'}
-            </span>
-          </button>
-
-          {ytOpen && (
-            <div className="px-6 pt-4 pb-6">
+          {ytSub === 'videos' && (
+            <div className="px-6 pt-5 pb-6">
 
               {/* Controls row */}
               <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -692,25 +766,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── Monthly Stats sub-section ── */}
-          <button
-            onClick={() => setMonthlyOpen(v => !v)}
-            className="w-full flex items-center justify-between px-6 py-3 border-t border-gray-100 hover:bg-rose-50/50 transition group"
-          >
-            <div className="flex items-center gap-2">
-              <span className={`text-gray-400 text-[10px] transition-transform duration-200 ${monthlyOpen ? 'rotate-90' : ''}`}>▶</span>
-              <span className="text-sm font-medium text-gray-500">Monthly Stats</span>
-              {!isConnected && (
-                <span className="text-xs text-amber-400 ml-1">· not connected</span>
-              )}
-            </div>
-            <span className="text-xs text-gray-300 group-hover:text-rose-400 transition">
-              {monthlyOpen ? 'collapse' : 'expand'}
-            </span>
-          </button>
-
-          {monthlyOpen && (
-            <div className="px-6 pt-4 pb-6 border-t border-gray-100">
+          {ytSub === 'monthly' && (
+            <div className="px-6 pt-5 pb-6">
 
               {/* Connection + sync controls */}
               <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -917,6 +974,18 @@ function QuizNotConnected() {
 QUIZ_SUPABASE_SERVICE_ROLE_KEY=<service_role key>
 ADMIN_PASSWORD=healyourheart2024`}
       </pre>
+    </div>
+  )
+}
+
+function ComingSoon({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="mb-6 bg-white border border-dashed border-gray-200 rounded-2xl p-12 text-center">
+      <span className="inline-block text-xs font-semibold text-rose-600 bg-rose-50 rounded-full px-3 py-1 mb-3">
+        Coming soon
+      </span>
+      <h2 className="text-base font-semibold text-gray-900 mb-1.5">{title}</h2>
+      <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">{body}</p>
     </div>
   )
 }

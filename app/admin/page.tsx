@@ -5,6 +5,7 @@ import { VIDEO_MAP } from '@/lib/videos'
 import { AdminClient } from '@/lib/quiz-insights'
 import ClientResults from '@/components/ClientResults'
 import ClientInsights from '@/components/ClientInsights'
+import VideoMetricsPanel from '@/components/VideoMetricsPanel'
 
 type Area = 'youtube' | 'community' | 'metrics' | 'reports' | 'sales' | 'newsletter'
 
@@ -175,7 +176,7 @@ export default function AdminPage() {
   const [viewsInput, setViewsInput] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
-  const [ytSub, setYtSub] = useState<'videos' | 'monthly'>('videos')
+  const [ytSub, setYtSub] = useState<'videos' | 'monthly' | 'metrics'>('videos')
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [syncingAnalytics, setSyncingAnalytics] = useState(false)
@@ -510,7 +511,8 @@ export default function AdminPage() {
             {([
               { id: 'videos', label: 'Videos' },
               { id: 'monthly', label: 'Monthly stats' },
-            ] as { id: 'videos' | 'monthly'; label: string }[]).map((t) => (
+              { id: 'metrics', label: 'Video metrics' },
+            ] as { id: 'videos' | 'monthly' | 'metrics'; label: string }[]).map((t) => (
               <button
                 key={t.id}
                 onClick={() => setYtSub(t.id)}
@@ -988,6 +990,12 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {ytSub === 'metrics' && (
+            <div className="px-6 pt-5 pb-6">
+              <VideoMetricsPanel password={password} />
             </div>
           )}
 

@@ -6,7 +6,7 @@ import { AdminClient } from '@/lib/quiz-insights'
 import ClientResults from '@/components/ClientResults'
 import ClientInsights from '@/components/ClientInsights'
 
-type Area = 'youtube' | 'community' | 'metrics' | 'reports'
+type Area = 'youtube' | 'community' | 'metrics' | 'reports' | 'sales' | 'newsletter'
 
 const AREAS: { id: Area; label: string; icon: ReactNode }[] = [
   {
@@ -47,6 +47,26 @@ const AREAS: { id: Area; label: string; icon: ReactNode }[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
         <path d="M6 2h9l4 4v16H6z" />
         <path d="M14 2v5h5M9 13h7M9 17h7" />
+      </svg>
+    ),
+  },
+  {
+    id: 'sales',
+    label: 'Sales',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <path d="M3 17l6-6 4 4 8-8" />
+        <path d="M17 7h4v4" />
+      </svg>
+    ),
+  },
+  {
+    id: 'newsletter',
+    label: 'Newsletter',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M3 7l9 6 9-6" />
       </svg>
     ),
   },
@@ -387,27 +407,27 @@ export default function AdminPage() {
         </div>
 
         {/* Business-area nav */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-8">
+        <div className="grid grid-cols-6 gap-2 mb-8">
           {AREAS.map((a) => {
             const active = area === a.id
             return (
               <button
                 key={a.id}
                 onClick={() => setArea(a.id)}
-                className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition ${
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left min-w-0 transition ${
                   active
                     ? 'bg-rose-500 border-rose-500 text-white shadow-sm'
                     : 'bg-white border-gray-200 text-gray-700 hover:border-rose-400'
                 }`}
               >
                 <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                  className={`flex h-7 w-7 flex-none items-center justify-center rounded-lg ${
                     active ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
                   }`}
                 >
                   {a.icon}
                 </span>
-                <span className="text-sm font-semibold">{a.label}</span>
+                <span className="text-[13px] font-semibold truncate">{a.label}</span>
               </button>
             )
           })}
@@ -461,6 +481,22 @@ export default function AdminPage() {
           <ComingSoon
             title="Reports"
             body="Ready-to-share summaries pulled from your data — a marketing stats sheet, a monthly recap, a client-progress report. We'll decide together what each report should say."
+          />
+        )}
+
+        {/* ── Sales area ── */}
+        {area === 'sales' && (
+          <ComingSoon
+            title="Sales"
+            body="Your sales pipeline and revenue in one view — calls booked, conversions, and what's closing. Tell me what you track and I'll build it here."
+          />
+        )}
+
+        {/* ── Newsletter area ── */}
+        {area === 'newsletter' && (
+          <ComingSoon
+            title="Newsletter"
+            body="Subscriber growth, sign-up sources, and campaign performance for your email list. Let me know what matters and I'll lay it out here."
           />
         )}
 

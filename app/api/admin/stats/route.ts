@@ -4,22 +4,44 @@ import { supabaseAdmin } from '@/lib/supabase'
 const isYouTubeSource = (video_id: string) =>
   /^\d+$/.test(video_id) || video_id === 'pin'
 
+const PAGE_SIZE = 1000
+
+// Supabase returns at most 1000 rows per request. link_clicks grew past that
+// (frozen the dashboard at ~1000 clicks), so page through every row.
+async function fetchAllClicks(from: string | null, to: string | null) {
+  const all: { video_id: string; destination: string }[] = []
+  for (let start = 0; ; start += PAGE_SIZE) {
+    let q = supabaseAdmin
+      .from('link_clicks')
+      .select('video_id, destination')
+      .order('id', { ascending: true })
+      .range(start, start + PAGE_SIZE - 1)
+
+    if (from) q = q.gte('clicked_at', from)
+    if (to)   q = q.lte('clicked_at', to)
+
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+  }
+  return all
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
-  let clicksQuery = supabaseAdmin
-    .from('link_clicks')
-    .select('video_id, destination')
-
-  if (from) clicksQuery = clicksQuery.gte('clicked_at', from)
-  if (to)   clicksQuery = clicksQuery.lte('clicked_at', to)
-
-  const { data: clicks, error: clicksError } = await clicksQuery
-
-  if (clicksError) {
-    return NextResponse.json({ error: clicksError.message }, { status: 500 })
+  let clicks: { video_id: string; destination: string }[]
+  try {
+    clicks = await fetchAllClicks(from, to)
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to load clicks' },
+      { status: 500 }
+    )
   }
 
   const { data: revenues } = await supabaseAdmin

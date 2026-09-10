@@ -6,6 +6,7 @@ import { AdminClient } from '@/lib/quiz-insights'
 import ClientResults from '@/components/ClientResults'
 import ClientInsights from '@/components/ClientInsights'
 import VideoMetricsPanel from '@/components/VideoMetricsPanel'
+import UtmChecker from '@/components/UtmChecker'
 
 type Area = 'youtube' | 'community' | 'metrics' | 'reports' | 'sales' | 'newsletter'
 
@@ -472,10 +473,14 @@ export default function AdminPage() {
 
         {/* ── Monthly Metrics area ── */}
         {area === 'metrics' && (
-          <ComingSoon
-            title="Monthly Metrics"
-            body="A month-by-month snapshot of the whole business in one place — revenue, leads, sales, and channel growth side by side. Tell me which numbers matter most and I'll lay them out here."
-          />
+          <div className="mb-6">
+            <div className="flex gap-1 border-b border-gray-200 mb-6">
+              <button className="px-4 py-2.5 text-sm font-medium -mb-px border-b-2 border-rose-500 text-rose-600">
+                UTM Checker
+              </button>
+            </div>
+            <UtmChecker />
+          </div>
         )}
 
         {/* ── Reports area ── */}

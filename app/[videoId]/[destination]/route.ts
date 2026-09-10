@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { DESTINATIONS } from '@/lib/destinations'
+import { buildTrackedUrl } from '@/lib/tracking-links'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ videoId: string; destination: string }> }
 ) {
   const { videoId, destination } = await params
-  const targetUrl = DESTINATIONS[destination.toLowerCase()]
+  const targetUrl = buildTrackedUrl(videoId, destination)
 
   // If destination is unknown, redirect to main site
   if (!targetUrl) {

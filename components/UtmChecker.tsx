@@ -34,8 +34,8 @@ export default function UtmChecker() {
     <div>
       <p className="text-sm text-gray-500 mb-4 max-w-2xl leading-relaxed">
         Type a video number to see the exact link that goes in the description (left) and where it
-        sends people, with the tracking labels attached (right). The labels tell Calendly, Kartra and
-        Google Analytics which video a lead came from.
+        sends people, with the tracking labels attached (right). The labels tell Calendly and Kartra
+        which video a lead came from, so it can flow onto your sales sheet when they book.
       </p>
 
       <div className="flex items-center gap-2 mb-5">

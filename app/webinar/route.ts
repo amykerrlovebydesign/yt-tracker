@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { DESTINATIONS } from '@/lib/destinations'
+import { buildUtmUrl } from '@/lib/tracking-links'
 
-// Short link for the pinned YouTube channel button
-// go.healyourheart.school/webinar → logs as source "pin" then redirects
+// Short link for the pinned YouTube channel/homepage button.
+// go.healyourheart.school/webinar → logs source "pin" then redirects to the
+// webinar page with UTMs: source=youtube, medium=webinar, campaign=homepage.
 
 export async function GET(request: NextRequest) {
-  const targetUrl = DESTINATIONS['webinar']
+  const targetUrl = buildUtmUrl('webinar', 'webinar', 'homepage')
+
+  if (!targetUrl) {
+    return NextResponse.redirect('https://www.healyourheart.school')
+  }
 
   supabaseAdmin
     .from('link_clicks')

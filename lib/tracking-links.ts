@@ -22,24 +22,29 @@ const MEDIUM_BY_DESTINATION: Record<string, string> = {
 }
 
 /**
- * The single source of truth for what a YouTube tracking link redirects to.
- * Appends UTM labels so the Sales Tracker can attribute a booked call back to
- * the exact video + funnel. Read it like a sentence:
- * "came from youtube, through the application funnel, because of video 151."
- *
- *   utm_source   = youtube        (the platform the link lives on)
- *   utm_medium   = <funnel>       (application / webinar / leadmagnet / quiz)
- *   utm_campaign = yt_<number>    (the exact video)
+ * Attach UTM labels to a destination URL. utm_source is always youtube (every
+ * tracked link lives on YouTube). Read it like a sentence:
+ * "came from youtube, through the <medium> funnel, because of <campaign>."
  */
-export function buildTrackedUrl(videoId: string, destination: string): string | null {
-  const dest = destination.toLowerCase()
-  const base = DESTINATIONS[dest]
+export function buildUtmUrl(destination: string, medium: string, campaign: string): string | null {
+  const base = DESTINATIONS[destination.toLowerCase()]
   if (!base) return null
   const url = new URL(base)
   url.searchParams.set('utm_source', 'youtube')
-  url.searchParams.set('utm_medium', MEDIUM_BY_DESTINATION[dest] || dest)
-  url.searchParams.set('utm_campaign', `yt_${videoId}`)
+  url.searchParams.set('utm_medium', medium)
+  url.searchParams.set('utm_campaign', campaign)
   return url.toString()
+}
+
+/**
+ * The single source of truth for what a per-video YouTube tracking link
+ * redirects to. medium = the destination's funnel; campaign = the exact video.
+ *
+ *   utm_source=youtube  utm_medium=<funnel>  utm_campaign=yt_<number>
+ */
+export function buildTrackedUrl(videoId: string, destination: string): string | null {
+  const dest = destination.toLowerCase()
+  return buildUtmUrl(dest, MEDIUM_BY_DESTINATION[dest] || dest, `yt_${videoId}`)
 }
 
 /** The short link that goes in the video description. */

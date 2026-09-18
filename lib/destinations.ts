@@ -4,6 +4,7 @@ export const DESTINATIONS: Record<string, string> = {
   webinar:  'https://www.healyourheart.school/webinar',
   quiz:     'https://www.healyourheart.school/quiz',
   guide:    'https://www.healyourheart.school/guide',
+  calendar: 'https://www.healyourheart.school/calendar',
 }
 
 export const DESTINATION_LABELS: Record<string, string> = {
